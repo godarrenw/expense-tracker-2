@@ -8,13 +8,13 @@ compatibility_date = "2023-10-30"
 
 [[env.production.d1_databases]]
 binding = "DB"
-database_name = "expense-tracker-db"
-database_id = "your-database-id-here"
+database_name = "db1"
+database_id = "cd369d0c-31e7-41ad-bc42-b3921be01efe"
 
 [env.development.vars]
 ADMIN_PASSWORD = "dev-password"
 
 [[env.development.d1_databases]]
 binding = "DB"
-database_name = "expense-tracker-db"
-preview_database_id = "your-preview-database-id-here"
+database_name = "db1"
+preview_database_id = "cd369d0c-31e7-41ad-bc42-b3921be01efe"
