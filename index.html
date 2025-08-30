@@ -197,6 +197,13 @@
 
         <div id="error" class="error" style="display: none;"></div>
 
+        <!-- 调试信息 -->
+        <div id="debugInfo" style="display: none; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 5px; padding: 15px; margin: 20px 0; font-family: monospace; font-size: 12px;">
+            <h4>调试信息：</h4>
+            <div id="debugContent"></div>
+            <button onclick="toggleDebug()" style="margin-top: 10px; padding: 5px 10px; font-size: 12px;">隐藏调试信息</button>
+        </div>
+
         <div id="content" style="display: none;">
             <!-- 当前支出信息 -->
             <div class="current-info">
@@ -254,38 +261,94 @@
 
         async function loadExpenseData() {
             try {
+                console.log('开始加载数据...');
+                addDebugInfo('开始加载数据...');
+                
                 // 同时加载外部API数据和本地历史数据
+                console.log('请求外部API:', EXTERNAL_API_URL);
+                console.log('请求本地API: /api/expenses');
+                addDebugInfo(`请求外部API: ${EXTERNAL_API_URL}`);
+                addDebugInfo('请求本地API: /api/expenses');
+                
                 const [externalResponse, historyResponse] = await Promise.all([
-                    fetch(EXTERNAL_API_URL).catch(() => null),
-                    fetch('/api/expenses').catch(() => null)
+                    fetch(EXTERNAL_API_URL, {
+                        method: 'GET',
+                        mode: 'cors',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    }).catch(error => {
+                        console.error('外部API请求失败:', error);
+                        return null;
+                    }),
+                    fetch('/api/expenses').catch(error => {
+                        console.error('本地API请求失败:', error);
+                        return null;
+                    })
                 ]);
 
                 let currentData = null;
                 let historyData = [];
 
                 // 处理外部API数据（当月数据）
+                console.log('外部API响应:', externalResponse);
+                addDebugInfo(`外部API响应状态: ${externalResponse?.status || 'null'}`);
                 if (externalResponse && externalResponse.ok) {
-                    const externalResult = await externalResponse.json();
-                    if (externalResult.code === 200 && externalResult.data) {
-                        currentData = externalResult.data;
+                    try {
+                        const externalResult = await externalResponse.json();
+                        console.log('外部API数据:', externalResult);
+                        addDebugInfo(`外部API返回数据: ${JSON.stringify(externalResult)}`);
+                        if (externalResult.code === 200 && externalResult.data) {
+                            currentData = externalResult.data;
+                            console.log('成功获取外部API数据:', currentData);
+                            addDebugInfo('✅ 成功获取外部API数据');
+                        } else {
+                            addDebugInfo(`❌ 外部API数据格式不正确: code=${externalResult.code}`);
+                        }
+                    } catch (error) {
+                        console.error('解析外部API数据失败:', error);
+                        addDebugInfo(`❌ 解析外部API数据失败: ${error.message}`);
                     }
+                } else {
+                    console.warn('外部API不可用，状态:', externalResponse?.status);
+                    addDebugInfo(`⚠️ 外部API不可用，状态: ${externalResponse?.status || '请求失败'}`);
                 }
 
                 // 处理本地历史数据
+                console.log('本地API响应:', historyResponse);
                 if (historyResponse && historyResponse.ok) {
-                    const historyResult = await historyResponse.json();
-                    if (historyResult.success && historyResult.data) {
-                        historyData = historyResult.data;
+                    try {
+                        const historyResult = await historyResponse.json();
+                        console.log('本地API数据:', historyResult);
+                        if (historyResult.success && historyResult.data) {
+                            historyData = historyResult.data;
+                            console.log('成功获取历史数据:', historyData);
+                        }
+                    } catch (error) {
+                        console.error('解析本地API数据失败:', error);
                     }
+                } else {
+                    console.warn('本地API不可用，状态:', historyResponse?.status);
                 }
 
                 // 更新当前支出信息
                 if (currentData) {
+                    console.log('更新当前支出信息:', currentData);
                     updateCurrentInfo(currentData);
+                } else {
+                    console.warn('没有外部API数据，使用默认值');
+                    // 显示默认值
+                    updateCurrentInfo({
+                        total_week_spent: 0,
+                        total_month_spent: 0,
+                        remaining_weekly_budget: 0,
+                        remaining_monthly_budget: 0
+                    });
                 }
 
                 // 合并数据并渲染图表
                 const combinedData = combineData(currentData, historyData);
+                console.log('合并后的数据:', combinedData);
                 renderChart(combinedData);
                 updateStats(combinedData);
                 
@@ -449,8 +512,46 @@
             document.getElementById('error').textContent = message;
         }
 
+        // 调试功能
+        function addDebugInfo(message) {
+            const debugContent = document.getElementById('debugContent');
+            const timestamp = new Date().toLocaleTimeString();
+            debugContent.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            document.getElementById('debugInfo').style.display = 'block';
+        }
+
+        function toggleDebug() {
+            const debugInfo = document.getElementById('debugInfo');
+            if (debugInfo.style.display === 'none') {
+                debugInfo.style.display = 'block';
+            } else {
+                debugInfo.style.display = 'none';
+            }
+        }
+
+        // 添加显示调试信息按钮
+        function showDebugButton() {
+            const button = document.createElement('button');
+            button.textContent = '显示调试信息';
+            button.onclick = toggleDebug;
+            button.style.position = 'fixed';
+            button.style.top = '20px';
+            button.style.left = '20px';
+            button.style.zIndex = '1000';
+            button.style.padding = '5px 10px';
+            button.style.fontSize = '12px';
+            button.style.backgroundColor = '#007bff';
+            button.style.color = 'white';
+            button.style.border = 'none';
+            button.style.borderRadius = '3px';
+            document.body.appendChild(button);
+        }
+
         // 页面加载时获取数据
-        document.addEventListener('DOMContentLoaded', loadExpenseData);
+        document.addEventListener('DOMContentLoaded', function() {
+            showDebugButton();
+            loadExpenseData();
+        });
 
         // 每30秒刷新一次数据
         setInterval(loadExpenseData, 30000);

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        button { padding: 10px 20px; font-size: 16px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>API连接测试</h1>
+    <button onclick="testExternalAPI()">测试外部API</button>
+    <button onclick="testLocalAPI()">测试本地API</button>
+    
+    <div id="results"></div>
+
+    <script>
+        const EXTERNAL_API_URL = 'https://1252702612-6e2319h9m9.ap-guangzhou.tencentscf.com';
+
+        function addResult(title, content, isSuccess) {
+            const resultsDiv = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `result ${isSuccess ? 'success' : 'error'}`;
+            resultDiv.innerHTML = `<h3>${title}</h3><pre>${content}</pre>`;
+            resultsDiv.appendChild(resultDiv);
+        }
+
+        async function testExternalAPI() {
+            try {
+                console.log('开始测试外部API:', EXTERNAL_API_URL);
+                const response = await fetch(EXTERNAL_API_URL, {
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                console.log('外部API响应状态:', response.status);
+                console.log('外部API响应头:', response.headers);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('外部API数据:', data);
+                    addResult('外部API测试 - 成功', JSON.stringify(data, null, 2), true);
+                } else {
+                    addResult('外部API测试 - 失败', `状态码: ${response.status}\n状态文本: ${response.statusText}`, false);
+                }
+            } catch (error) {
+                console.error('外部API错误:', error);
+                addResult('外部API测试 - 错误', `错误: ${error.message}\n类型: ${error.name}`, false);
+            }
+        }
+
+        async function testLocalAPI() {
+            try {
+                console.log('开始测试本地API: /api/expenses');
+                const response = await fetch('/api/expenses');
+                
+                console.log('本地API响应状态:', response.status);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('本地API数据:', data);
+                    addResult('本地API测试 - 成功', JSON.stringify(data, null, 2), true);
+                } else {
+                    addResult('本地API测试 - 失败', `状态码: ${response.status}\n状态文本: ${response.statusText}`, false);
+                }
+            } catch (error) {
+                console.error('本地API错误:', error);
+                addResult('本地API测试 - 错误', `错误: ${error.message}`, false);
+            }
+        }
+
+        // 页面加载时自动测试
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('页面加载完成，开始自动测试');
+            testExternalAPI();
+            setTimeout(testLocalAPI, 1000);
+        });
+    </script>
+</body>
+</html>
