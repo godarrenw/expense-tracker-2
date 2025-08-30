@@ -258,6 +258,7 @@
     <script>
         let chart;
         const EXTERNAL_API_URL = 'https://1252702612-6e2319h9m9.ap-guangzhou.tencentscf.com';
+        const PROXY_API_URL = '/api/proxy'; // 使用本地代理
 
         async function loadExpenseData() {
             try {
@@ -265,15 +266,15 @@
                 addDebugInfo('开始加载数据...');
                 
                 // 同时加载外部API数据和本地历史数据
-                console.log('请求外部API:', EXTERNAL_API_URL);
+                console.log('请求代理API:', PROXY_API_URL);
                 console.log('请求本地API: /api/expenses');
-                addDebugInfo(`请求外部API: ${EXTERNAL_API_URL}`);
+                addDebugInfo(`请求代理API: ${PROXY_API_URL}`);
                 addDebugInfo('请求本地API: /api/expenses');
                 
                 const [externalResponse, historyResponse] = await Promise.all([
-                    fetch(EXTERNAL_API_URL).catch(error => {
-                        console.error('外部API请求失败:', error);
-                        addDebugInfo(`外部API请求错误: ${error.message}`);
+                    fetch(PROXY_API_URL).catch(error => {
+                        console.error('代理API请求失败:', error);
+                        addDebugInfo(`代理API请求错误: ${error.message}`);
                         return null;
                     }),
                     fetch('/api/expenses').catch(error => {
@@ -285,28 +286,36 @@
                 let currentData = null;
                 let historyData = [];
 
-                // 处理外部API数据（当月数据）
-                console.log('外部API响应:', externalResponse);
-                addDebugInfo(`外部API响应状态: ${externalResponse?.status || 'null'}`);
+                // 处理代理API数据（当月数据）
+                console.log('代理API响应:', externalResponse);
+                addDebugInfo(`代理API响应状态: ${externalResponse?.status || 'null'}`);
                 if (externalResponse && externalResponse.ok) {
                     try {
-                        const externalResult = await externalResponse.json();
-                        console.log('外部API数据:', externalResult);
-                        addDebugInfo(`外部API返回数据: ${JSON.stringify(externalResult)}`);
-                        if (externalResult.code === 200 && externalResult.data) {
-                            currentData = externalResult.data;
-                            console.log('成功获取外部API数据:', currentData);
-                            addDebugInfo('✅ 成功获取外部API数据');
+                        const proxyResult = await externalResponse.json();
+                        console.log('代理API数据:', proxyResult);
+                        addDebugInfo(`代理API返回数据: ${JSON.stringify(proxyResult)}`);
+                        
+                        // 代理API成功且包含外部API数据
+                        if (proxyResult.success && proxyResult.data) {
+                            const externalData = proxyResult.data;
+                            // 检查外部API的数据格式
+                            if (externalData.code === 200 && externalData.data) {
+                                currentData = externalData.data;
+                                console.log('成功获取外部API数据:', currentData);
+                                addDebugInfo('✅ 成功获取外部API数据');
+                            } else {
+                                addDebugInfo(`❌ 外部API数据格式不正确: code=${externalData.code}`);
+                            }
                         } else {
-                            addDebugInfo(`❌ 外部API数据格式不正确: code=${externalResult.code}`);
+                            addDebugInfo(`❌ 代理API返回错误: ${proxyResult.error || '未知错误'}`);
                         }
                     } catch (error) {
-                        console.error('解析外部API数据失败:', error);
-                        addDebugInfo(`❌ 解析外部API数据失败: ${error.message}`);
+                        console.error('解析代理API数据失败:', error);
+                        addDebugInfo(`❌ 解析代理API数据失败: ${error.message}`);
                     }
                 } else {
-                    console.warn('外部API不可用，状态:', externalResponse?.status);
-                    addDebugInfo(`⚠️ 外部API不可用，状态: ${externalResponse?.status || '请求失败'}`);
+                    console.warn('代理API不可用，状态:', externalResponse?.status);
+                    addDebugInfo(`⚠️ 代理API不可用，状态: ${externalResponse?.status || '请求失败'}`);
                 }
 
                 // 处理本地历史数据

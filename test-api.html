@@ -15,6 +15,7 @@
 <body>
     <h1>API连接测试</h1>
     <button onclick="testExternalAPI()">测试外部API</button>
+    <button onclick="testProxyAPI()">测试代理API</button>
     <button onclick="testLocalAPI()">测试本地API</button>
     
     <div id="results"></div>
@@ -57,6 +58,26 @@
             }
         }
 
+        async function testProxyAPI() {
+            try {
+                console.log('开始测试代理API: /api/proxy');
+                const response = await fetch('/api/proxy');
+                
+                console.log('代理API响应状态:', response.status);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('代理API数据:', data);
+                    addResult('代理API测试 - 成功', JSON.stringify(data, null, 2), true);
+                } else {
+                    addResult('代理API测试 - 失败', `状态码: ${response.status}\n状态文本: ${response.statusText}`, false);
+                }
+            } catch (error) {
+                console.error('代理API错误:', error);
+                addResult('代理API测试 - 错误', `错误: ${error.message}`, false);
+            }
+        }
+
         async function testLocalAPI() {
             try {
                 console.log('开始测试本地API: /api/expenses');
@@ -81,7 +102,8 @@
         document.addEventListener('DOMContentLoaded', function() {
             console.log('页面加载完成，开始自动测试');
             testExternalAPI();
-            setTimeout(testLocalAPI, 1000);
+            setTimeout(testProxyAPI, 1000);
+            setTimeout(testLocalAPI, 2000);
         });
     </script>
 </body>
