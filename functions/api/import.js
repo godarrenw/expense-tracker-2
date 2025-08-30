@@ -166,8 +166,13 @@ function detectHeader(line) {
   const fields = parseCSVFields(line);
   if (fields.length < 3) return false;
   
-  // 检查第一个字段是否像日期
+  // 检查是否包含钱迹格式的表头
   const firstField = fields[0].toLowerCase();
+  if (firstField.includes('id') && fields.length > 10) {
+    return true;
+  }
+  
+  // 检查第一个字段是否像日期
   if (firstField.includes('date') || firstField.includes('日期') || firstField.includes('时间')) {
     return true;
   }
@@ -185,6 +190,12 @@ function detectHeader(line) {
 function parseCSVLine(line) {
   const fields = parseCSVFields(line);
   
+  // 检查是否是钱迹格式（18个字段）
+  if (fields.length >= 18) {
+    return parseQianJiFormat(fields);
+  }
+  
+  // 原有格式的解析逻辑
   if (fields.length < 3) {
     return null; // 至少需要日期、描述、金额三个字段
   }
@@ -244,6 +255,126 @@ function parseCSVLine(line) {
     category: category,
     note: note
   };
+}
+
+// 解析钱迹格式的CSV
+function parseQianJiFormat(fields) {
+  // 钱迹格式：ID,时间,分类,二级分类,类型,金额,币种,账户1,账户2,备注,已报销,手续费,优惠券,记账者,账单标记,标签,账单图片,关联账单
+  
+  // 解析时间（第2个字段）
+  let date = '';
+  const timeStr = fields[1].trim(); // "2025-08-30 21:37:47"
+  
+  if (timeStr) {
+    // 提取日期部分
+    const dateMatch = timeStr.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (dateMatch) {
+      date = dateMatch[1];
+    } else {
+      // 如果无法解析，使用今天的日期
+      date = new Date().toISOString().split('T')[0];
+    }
+  } else {
+    date = new Date().toISOString().split('T')[0];
+  }
+
+  // 解析分类（第3个字段：分类，第4个字段：二级分类）
+  const category1 = fields[2].trim(); // "三餐"
+  const category2 = fields[3].trim(); // "午餐"
+  
+  // 组合分类，优先使用一级分类，如果有二级分类则组合
+  let category = '';
+  if (category1) {
+    category = category1;
+    // 映射钱迹分类到我们的分类系统
+    category = mapQianJiCategory(category1, category2);
+  } else {
+    category = '其他';
+  }
+
+  // 解析类型（第5个字段）
+  const type = fields[4].trim(); // "支出"
+  
+  // 只处理支出记录，跳过收入
+  if (type !== '支出') {
+    return null;
+  }
+
+  // 解析金额（第6个字段）
+  let amount = 0;
+  const amountStr = fields[5].trim(); // "555.0"
+  const amountNum = parseFloat(amountStr);
+  if (!isNaN(amountNum)) {
+    amount = Math.abs(amountNum);
+  }
+
+  // 解析备注（第10个字段）
+  let note = fields[9] ? fields[9].trim() : '';
+  
+  // 如果没有备注，使用分类信息作为备注
+  if (!note) {
+    note = category2 ? `${category1} - ${category2}` : category1;
+  }
+
+  return {
+    date: date,
+    amount: amount,
+    category: category,
+    note: note
+  };
+}
+
+// 映射钱迹分类到系统分类
+function mapQianJiCategory(category1, category2) {
+  const categoryMap = {
+    '三餐': '餐饮',
+    '食物': '餐饮',
+    '餐饮': '餐饮',
+    '零食': '餐饮',
+    '饮品': '餐饮',
+    '交通': '交通',
+    '出行': '交通',
+    '打车': '交通',
+    '公交': '交通',
+    '地铁': '交通',
+    '购物': '购物',
+    '日用': '购物',
+    '服装': '购物',
+    '数码': '购物',
+    '家居': '购物',
+    '娱乐': '娱乐',
+    '游戏': '娱乐',
+    '电影': '娱乐',
+    '运动': '娱乐',
+    '医疗': '医疗',
+    '保健': '医疗',
+    '药品': '医疗',
+    '教育': '教育',
+    '学习': '教育',
+    '培训': '教育',
+    '住房': '住房',
+    '房租': '住房',
+    '水电': '住房',
+    '保险': '保险',
+    '旅行': '旅行',
+    '旅游': '旅行',
+    '酒店': '旅行',
+    '礼物': '礼物',
+    '红包': '礼物'
+  };
+
+  // 先尝试匹配一级分类
+  if (categoryMap[category1]) {
+    return categoryMap[category1];
+  }
+  
+  // 再尝试匹配二级分类
+  if (category2 && categoryMap[category2]) {
+    return categoryMap[category2];
+  }
+  
+  // 都没有匹配到，返回其他
+  return '其他';
 }
 
 // 解析CSV字段（处理逗号和引号）

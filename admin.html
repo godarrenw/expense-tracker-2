@@ -244,6 +244,9 @@
         <div class="header">
             <h1>🔐 管理后台</h1>
             <p>支出记录管理系统</p>
+            <div id="logoutBtn" style="display: none; position: absolute; top: 20px; right: 20px;">
+                <button class="btn btn-danger" onclick="logout()">🚪 退出登录</button>
+            </div>
         </div>
 
         <!-- 身份验证区域 -->
@@ -299,16 +302,18 @@
             <div class="section">
                 <h3>📁 CSV批量导入</h3>
                 <p style="color: #666; margin-bottom: 20px;">
-                    支持UTF-8和GBK编码，自动检测表头。CSV格式：日期,描述,金额,分类（分类可选）
+                    支持UTF-8和GBK编码，自动检测表头和格式。支持钱迹、自定义等多种CSV格式
                 </p>
                 <div class="form-group">
                     <label>选择CSV文件</label>
                     <input type="file" id="csvFile" accept=".csv" style="margin-bottom: 10px;">
                     <div style="font-size: 0.9rem; color: #666;">
-                        <strong>支持格式示例：</strong><br>
-                        • 08-01-2025,晚饭,$84.50,餐饮<br>
-                        • 2025-08-01,便利店购物,15.00,购物<br>
-                        • 自动识别编码（UTF-8/GBK）和表头
+                        <strong>支持格式：</strong><br>
+                        • <strong>钱迹导出</strong>：自动识别钱迹应用导出的完整格式<br>
+                        • <strong>简单格式</strong>：日期,描述,金额,分类<br>
+                        • <strong>示例</strong>：08-01-2025,晚饭,$84.50,餐饮<br>
+                        • 自动过滤收入记录，只导入支出<br>
+                        • 智能分类映射和去重检测
                     </div>
                 </div>
                 <button class="btn btn-success" onclick="importCSV()" id="importBtn">
@@ -347,8 +352,7 @@
             document.getElementById('expenseDate').value = new Date().toISOString().split('T')[0];
             
             if (adminToken) {
-                document.getElementById('authSection').style.display = 'none';
-                document.getElementById('adminContent').style.display = 'block';
+                showAdminPanel();
                 loadRecords();
             }
         });
@@ -363,9 +367,7 @@
             adminToken = password;
             localStorage.setItem('adminToken', adminToken);
             
-            document.getElementById('authSection').style.display = 'none';
-            document.getElementById('adminContent').style.display = 'block';
-            
+            showAdminPanel();
             showMessage('登录成功', 'success');
             loadRecords();
         }
@@ -394,8 +396,7 @@
                     // 初始化成功后自动登录
                     adminToken = password;
                     localStorage.setItem('adminToken', adminToken);
-                    document.getElementById('authSection').style.display = 'none';
-                    document.getElementById('adminContent').style.display = 'block';
+                    showAdminPanel();
                 } else {
                     showMessage('初始化失败: ' + result.error, 'error');
                 }
@@ -699,6 +700,33 @@
                 }
             } catch (error) {
                 showMessage('删除失败: ' + error.message, 'error');
+            }
+        }
+
+        function showAdminPanel() {
+            document.getElementById('authSection').style.display = 'none';
+            document.getElementById('adminContent').style.display = 'block';
+            document.getElementById('logoutBtn').style.display = 'block';
+        }
+
+        function hideAdminPanel() {
+            document.getElementById('authSection').style.display = 'block';
+            document.getElementById('adminContent').style.display = 'none';
+            document.getElementById('logoutBtn').style.display = 'none';
+            // 清空密码输入框
+            document.getElementById('adminPassword').value = '';
+        }
+
+        function logout() {
+            if (confirm('确定要退出登录吗？')) {
+                // 清除本地存储的令牌
+                localStorage.removeItem('adminToken');
+                adminToken = '';
+                
+                // 隐藏管理面板，显示登录界面
+                hideAdminPanel();
+                
+                showMessage('已退出登录', 'success');
             }
         }
 
