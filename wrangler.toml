@@ -1,0 +1,20 @@
+name = "expense-tracker"
+main = "functions/_middleware.js"
+compatibility_date = "2023-10-30"
+
+[env.production.vars]
+# 在Cloudflare Pages设置环境变量
+# ADMIN_PASSWORD = "your-secure-password-here"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "expense-tracker-db"
+database_id = "your-database-id-here"
+
+[env.development.vars]
+ADMIN_PASSWORD = "dev-password"
+
+[[env.development.d1_databases]]
+binding = "DB"
+database_name = "expense-tracker-db"
+preview_database_id = "your-preview-database-id-here"

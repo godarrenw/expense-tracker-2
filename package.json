@@ -1,0 +1,24 @@
+{
+  "name": "expense-tracker",
+  "version": "1.0.0",
+  "description": "基于 Cloudflare Pages + Functions + D1 的个人支出追踪系统",
+  "main": "index.html",
+  "scripts": {
+    "dev": "wrangler pages dev . --d1 DB=expense-tracker-db",
+    "deploy": "wrangler pages publish .",
+    "db:create": "wrangler d1 create expense-tracker-db",
+    "db:migrate": "wrangler d1 execute expense-tracker-db --file=./schema.sql"
+  },
+  "keywords": [
+    "expense-tracker",
+    "cloudflare-pages",
+    "cloudflare-functions",
+    "d1-database",
+    "personal-finance"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}

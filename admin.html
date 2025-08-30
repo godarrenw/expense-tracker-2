@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理后台 - 支出记录</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #ff7b7b 0%, #667eea 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .auth-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+        }
+
+        .auth-section h3 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            color: #555;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 10px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            background: #5a6fd8;
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: #ff6b6b;
+        }
+
+        .btn-danger:hover {
+            background: #ff5252;
+        }
+
+        .btn-success {
+            background: #51cf66;
+        }
+
+        .btn-success:hover {
+            background: #40c057;
+        }
+
+        .admin-content {
+            display: none;
+        }
+
+        .section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+        }
+
+        .section h3 {
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 2fr 3fr;
+            gap: 15px;
+            align-items: end;
+        }
+
+        .records-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .records-table th,
+        .records-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e1e5e9;
+        }
+
+        .records-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .records-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .delete-btn {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+
+        .delete-btn:hover {
+            background: #ff5252;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .back-link {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: background 0.3s ease;
+        }
+
+        .back-link:hover {
+            background: rgba(0, 0, 0, 0.9);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            
+            .records-table {
+                font-size: 0.9rem;
+            }
+            
+            .records-table th,
+            .records-table td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back-link">← 返回首页</a>
+
+    <div class="container">
+        <div class="header">
+            <h1>🔐 管理后台</h1>
+            <p>支出记录管理系统</p>
+        </div>
+
+        <!-- 身份验证区域 -->
+        <div id="authSection" class="auth-section">
+            <h3>🔑 请输入管理密码</h3>
+            <div class="form-group">
+                <input type="password" id="adminPassword" placeholder="输入管理密码">
+            </div>
+            <button class="btn" onclick="authenticate()">登录</button>
+            <button class="btn btn-success" onclick="initDatabase()">一键初始化数据库</button>
+        </div>
+
+        <!-- 管理内容区域 -->
+        <div id="adminContent" class="admin-content">
+            <!-- 添加新记录 -->
+            <div class="section">
+                <h3>➕ 添加支出记录</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>日期</label>
+                        <input type="date" id="expenseDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>金额</label>
+                        <input type="number" id="expenseAmount" step="0.01" placeholder="0.00" required>
+                    </div>
+                    <div class="form-group">
+                        <label>分类</label>
+                        <select id="expenseCategory">
+                            <option value="">选择分类</option>
+                            <option value="餐饮">餐饮</option>
+                            <option value="交通">交通</option>
+                            <option value="购物">购物</option>
+                            <option value="娱乐">娱乐</option>
+                            <option value="医疗">医疗</option>
+                            <option value="教育">教育</option>
+                            <option value="住房">住房</option>
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>备注</label>
+                        <input type="text" id="expenseNote" placeholder="可选备注">
+                    </div>
+                </div>
+                <button class="btn" onclick="addExpense()">添加记录</button>
+            </div>
+
+            <!-- 记录列表 -->
+            <div class="section">
+                <h3>📋 最近记录</h3>
+                <button class="btn" onclick="loadRecords()">刷新记录</button>
+                <div id="recordsContainer">
+                    <!-- 记录表格将在这里动态生成 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 消息提示 -->
+        <div id="messageContainer"></div>
+    </div>
+
+    <script>
+        let adminToken = localStorage.getItem('adminToken') || '';
+
+        // 页面加载时检查是否已登录
+        document.addEventListener('DOMContentLoaded', function() {
+            // 设置今天的日期作为默认值
+            document.getElementById('expenseDate').value = new Date().toISOString().split('T')[0];
+            
+            if (adminToken) {
+                document.getElementById('authSection').style.display = 'none';
+                document.getElementById('adminContent').style.display = 'block';
+                loadRecords();
+            }
+        });
+
+        function authenticate() {
+            const password = document.getElementById('adminPassword').value;
+            if (!password) {
+                showMessage('请输入密码', 'error');
+                return;
+            }
+
+            adminToken = password;
+            localStorage.setItem('adminToken', adminToken);
+            
+            document.getElementById('authSection').style.display = 'none';
+            document.getElementById('adminContent').style.display = 'block';
+            
+            showMessage('登录成功', 'success');
+            loadRecords();
+        }
+
+        async function initDatabase() {
+            const password = document.getElementById('adminPassword').value;
+            if (!password) {
+                showMessage('请先输入管理密码', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/admin', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Token': password
+                    },
+                    body: JSON.stringify({ action: 'init_db' })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage('数据库初始化成功！', 'success');
+                    // 初始化成功后自动登录
+                    adminToken = password;
+                    localStorage.setItem('adminToken', adminToken);
+                    document.getElementById('authSection').style.display = 'none';
+                    document.getElementById('adminContent').style.display = 'block';
+                } else {
+                    showMessage('初始化失败: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showMessage('初始化失败: ' + error.message, 'error');
+            }
+        }
+
+        async function addExpense() {
+            const date = document.getElementById('expenseDate').value;
+            const amount = parseFloat(document.getElementById('expenseAmount').value);
+            const category = document.getElementById('expenseCategory').value;
+            const note = document.getElementById('expenseNote').value;
+
+            if (!date || !amount) {
+                showMessage('日期和金额为必填项', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/expenses', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Token': adminToken
+                    },
+                    body: JSON.stringify({
+                        date: date,
+                        amount: amount,
+                        category: category,
+                        note: note
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage('记录添加成功', 'success');
+                    // 清空表单
+                    document.getElementById('expenseAmount').value = '';
+                    document.getElementById('expenseCategory').value = '';
+                    document.getElementById('expenseNote').value = '';
+                    // 重新加载记录
+                    loadRecords();
+                } else {
+                    showMessage('添加失败: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showMessage('添加失败: ' + error.message, 'error');
+            }
+        }
+
+        async function loadRecords() {
+            try {
+                const response = await fetch('/api/admin?action=list_all', {
+                    headers: {
+                        'X-Admin-Token': adminToken
+                    }
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    renderRecords(result.data);
+                } else {
+                    showMessage('加载记录失败: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showMessage('加载记录失败: ' + error.message, 'error');
+            }
+        }
+
+        function renderRecords(records) {
+            const container = document.getElementById('recordsContainer');
+            
+            if (records.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">暂无记录</p>';
+                return;
+            }
+
+            let html = `
+                <table class="records-table">
+                    <thead>
+                        <tr>
+                            <th>日期</th>
+                            <th>金额</th>
+                            <th>分类</th>
+                            <th>备注</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            records.forEach(record => {
+                html += `
+                    <tr>
+                        <td>${record.date}</td>
+                        <td>¥${record.amount.toLocaleString()}</td>
+                        <td>${record.category || '-'}</td>
+                        <td>${record.note || '-'}</td>
+                        <td>
+                            <button class="delete-btn" onclick="deleteRecord(${record.id})">删除</button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        async function deleteRecord(id) {
+            if (!confirm('确定要删除这条记录吗？')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/expenses?id=${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-Admin-Token': adminToken
+                    }
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage('记录删除成功', 'success');
+                    loadRecords();
+                } else {
+                    showMessage('删除失败: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showMessage('删除失败: ' + error.message, 'error');
+            }
+        }
+
+        function showMessage(text, type) {
+            const container = document.getElementById('messageContainer');
+            const message = document.createElement('div');
+            message.className = `message ${type}`;
+            message.textContent = text;
+            
+            container.appendChild(message);
+            
+            // 3秒后自动移除消息
+            setTimeout(() => {
+                message.remove();
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
