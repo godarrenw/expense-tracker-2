@@ -281,6 +281,9 @@
                             <option value="医疗">医疗</option>
                             <option value="教育">教育</option>
                             <option value="住房">住房</option>
+                            <option value="保险">保险</option>
+                            <option value="旅行">旅行</option>
+                            <option value="礼物">礼物</option>
                             <option value="其他">其他</option>
                         </select>
                     </div>
@@ -290,6 +293,31 @@
                     </div>
                 </div>
                 <button class="btn" onclick="addExpense()">添加记录</button>
+            </div>
+
+            <!-- CSV批量导入 -->
+            <div class="section">
+                <h3>📁 CSV批量导入</h3>
+                <p style="color: #666; margin-bottom: 20px;">
+                    支持UTF-8和GBK编码，自动检测表头。CSV格式：日期,描述,金额,分类（分类可选）
+                </p>
+                <div class="form-group">
+                    <label>选择CSV文件</label>
+                    <input type="file" id="csvFile" accept=".csv" style="margin-bottom: 10px;">
+                    <div style="font-size: 0.9rem; color: #666;">
+                        <strong>支持格式示例：</strong><br>
+                        • 08-01-2025,晚饭,$84.50,餐饮<br>
+                        • 2025-08-01,便利店购物,15.00,购物<br>
+                        • 自动识别编码（UTF-8/GBK）和表头
+                    </div>
+                </div>
+                <button class="btn btn-success" onclick="importCSV()" id="importBtn">
+                    📤 导入CSV文件
+                </button>
+                <div id="importProgress" style="display: none; margin-top: 15px;">
+                    <div style="color: #667eea; font-weight: 500;">正在处理文件...</div>
+                </div>
+                <div id="importResult" style="margin-top: 15px;"></div>
             </div>
 
             <!-- 记录列表 -->
@@ -499,6 +527,88 @@
                 }
             } catch (error) {
                 showMessage('删除失败: ' + error.message, 'error');
+            }
+        }
+
+        async function importCSV() {
+            const fileInput = document.getElementById('csvFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showMessage('请选择CSV文件', 'error');
+                return;
+            }
+
+            if (!file.name.toLowerCase().endsWith('.csv')) {
+                showMessage('请选择CSV格式的文件', 'error');
+                return;
+            }
+
+            // 显示进度
+            document.getElementById('importProgress').style.display = 'block';
+            document.getElementById('importBtn').disabled = true;
+            document.getElementById('importResult').innerHTML = '';
+
+            try {
+                const formData = new FormData();
+                formData.append('csvFile', file);
+
+                const response = await fetch('/api/import', {
+                    method: 'POST',
+                    headers: {
+                        'X-Admin-Token': adminToken
+                    },
+                    body: formData
+                });
+
+                const result = await response.json();
+                
+                // 隐藏进度
+                document.getElementById('importProgress').style.display = 'none';
+                document.getElementById('importBtn').disabled = false;
+
+                if (result.success) {
+                    const data = result.data;
+                    let resultHtml = `
+                        <div class="message success">
+                            <strong>导入成功！</strong><br>
+                            • 文件编码: ${data.encoding.toUpperCase()}<br>
+                            • 总记录数: ${data.totalRecords}<br>
+                            • 成功导入: ${data.insertedCount}<br>
+                            • 失败记录: ${data.errorCount}
+                        </div>
+                    `;
+                    
+                    if (data.errors && data.errors.length > 0) {
+                        resultHtml += `
+                            <div style="margin-top: 10px; padding: 10px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px;">
+                                <strong>部分记录导入失败：</strong><br>
+                        `;
+                        data.errors.slice(0, 5).forEach(error => {
+                            resultHtml += `• ${error.record.date} - ${error.record.note}: ${error.error}<br>`;
+                        });
+                        if (data.errors.length > 5) {
+                            resultHtml += `• 还有 ${data.errors.length - 5} 个错误...`;
+                        }
+                        resultHtml += '</div>';
+                    }
+                    
+                    document.getElementById('importResult').innerHTML = resultHtml;
+                    
+                    // 清空文件选择
+                    fileInput.value = '';
+                    
+                    // 刷新记录列表
+                    loadRecords();
+                    
+                    showMessage(`成功导入 ${data.insertedCount} 条记录`, 'success');
+                } else {
+                    showMessage('导入失败: ' + result.error, 'error');
+                }
+            } catch (error) {
+                document.getElementById('importProgress').style.display = 'none';
+                document.getElementById('importBtn').disabled = false;
+                showMessage('导入失败: ' + error.message, 'error');
             }
         }
 
