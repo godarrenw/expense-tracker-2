@@ -323,7 +323,11 @@
             <!-- 记录列表 -->
             <div class="section">
                 <h3>📋 最近记录</h3>
-                <button class="btn" onclick="loadRecords()">刷新记录</button>
+                <div style="margin-bottom: 20px;">
+                    <button class="btn" onclick="loadRecords()">刷新记录</button>
+                    <button class="btn btn-danger" onclick="deleteZeroAmount()">🗑️ 删除金额为0的记录</button>
+                    <button class="btn btn-danger" onclick="confirmDeleteAll()">⚠️ 删除所有记录</button>
+                </div>
                 <div id="recordsContainer">
                     <!-- 记录表格将在这里动态生成 -->
                 </div>
@@ -571,13 +575,28 @@
                     const data = result.data;
                     let resultHtml = `
                         <div class="message success">
-                            <strong>导入成功！</strong><br>
+                            <strong>导入完成！</strong><br>
                             • 文件编码: ${data.encoding.toUpperCase()}<br>
                             • 总记录数: ${data.totalRecords}<br>
                             • 成功导入: ${data.insertedCount}<br>
+                            • 重复跳过: ${data.duplicateCount}<br>
                             • 失败记录: ${data.errorCount}
                         </div>
                     `;
+                    
+                    if (data.duplicates && data.duplicates.length > 0) {
+                        resultHtml += `
+                            <div style="margin-top: 10px; padding: 10px; background: #e3f2fd; border: 1px solid #90caf9; border-radius: 5px;">
+                                <strong>跳过的重复记录：</strong><br>
+                        `;
+                        data.duplicates.slice(0, 5).forEach(dup => {
+                            resultHtml += `• ${dup.date} - ${dup.note} (¥${dup.amount})<br>`;
+                        });
+                        if (data.duplicates.length > 5) {
+                            resultHtml += `• 还有 ${data.duplicates.length - 5} 个重复记录...`;
+                        }
+                        resultHtml += '</div>';
+                    }
                     
                     if (data.errors && data.errors.length > 0) {
                         resultHtml += `
@@ -609,6 +628,77 @@
                 document.getElementById('importProgress').style.display = 'none';
                 document.getElementById('importBtn').disabled = false;
                 showMessage('导入失败: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteZeroAmount() {
+            if (!confirm('确定要删除所有金额为0的记录吗？此操作不可撤销。')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/batch', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Token': adminToken
+                    },
+                    body: JSON.stringify({
+                        action: 'delete_zero_amount'
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage(`成功删除 ${result.data.deletedCount} 条金额为0的记录`, 'success');
+                    loadRecords();
+                } else {
+                    showMessage('删除失败: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showMessage('删除失败: ' + error.message, 'error');
+            }
+        }
+
+        async function confirmDeleteAll() {
+            // 第一次确认
+            if (!confirm('⚠️ 警告：此操作将删除所有支出记录！\n\n此操作不可撤销，确定要继续吗？')) {
+                return;
+            }
+
+            // 第二次确认
+            const confirmText = prompt('请输入 "DELETE ALL" 来确认删除所有记录：');
+            if (confirmText !== 'DELETE ALL') {
+                showMessage('确认文本不正确，操作已取消', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/batch', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Token': adminToken
+                    },
+                    body: JSON.stringify({
+                        action: 'delete_all',
+                        data: {
+                            confirmToken: 'CONFIRM_DELETE_ALL'
+                        }
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage(`成功删除所有记录 (共 ${result.data.deletedCount} 条)`, 'success');
+                    loadRecords();
+                } else {
+                    showMessage('删除失败: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showMessage('删除失败: ' + error.message, 'error');
             }
         }
 

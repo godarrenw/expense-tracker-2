@@ -52,13 +52,35 @@ export async function onRequestPost(context) {
       }, { status: 400 });
     }
 
-    // 批量插入数据库
+    // 检查重复记录
     const db = context.env.DB;
+    const duplicates = [];
+    const newRecords = [];
+
+    for (const record of parseResult.data) {
+      // 检查是否存在重复记录（相同日期、金额、备注）
+      const existing = await db.prepare(`
+        SELECT id FROM expenses 
+        WHERE date = ? AND amount = ? AND note = ?
+        LIMIT 1
+      `).bind(record.date, record.amount, record.note).first();
+
+      if (existing) {
+        duplicates.push({
+          ...record,
+          existingId: existing.id
+        });
+      } else {
+        newRecords.push(record);
+      }
+    }
+
+    // 批量插入新记录
     let insertedCount = 0;
     let errorCount = 0;
     const errors = [];
 
-    for (const record of parseResult.data) {
+    for (const record of newRecords) {
       try {
         await db.prepare(`
           INSERT INTO expenses (date, amount, category, note)
@@ -80,7 +102,9 @@ export async function onRequestPost(context) {
         encoding: encoding,
         totalRecords: parseResult.data.length,
         insertedCount: insertedCount,
+        duplicateCount: duplicates.length,
         errorCount: errorCount,
+        duplicates: duplicates.slice(0, 10), // 返回前10个重复记录
         errors: errors.slice(0, 10) // 只返回前10个错误
       }
     });
@@ -161,8 +185,8 @@ function detectHeader(line) {
 function parseCSVLine(line) {
   const fields = parseCSVFields(line);
   
-  if (fields.length < 2) {
-    return null; // 跳过格式不正确的行
+  if (fields.length < 3) {
+    return null; // 至少需要日期、描述、金额三个字段
   }
 
   // 解析日期 - 支持多种格式
@@ -193,37 +217,24 @@ function parseCSVLine(line) {
     }
   }
 
-  // 解析金额 - 移除货币符号和空格
+  // 解析备注（第2个字段）
+  const note = fields[1].trim();
+
+  // 解析金额（第3个字段）- 移除货币符号和空格
   let amount = 0;
-  const amountStr = fields[1].replace(/[\$¥,\s]/g, '');
+  const amountStr = fields[2].replace(/[\$¥,\s]/g, '');
   const amountNum = parseFloat(amountStr);
   if (!isNaN(amountNum)) {
     amount = Math.abs(amountNum); // 确保金额为正数
   }
 
-  // 解析分类和备注
+  // 解析分类
   let category = '';
-  let note = '';
-
-  if (fields.length >= 3) {
-    // 如果第3个字段看起来像分类，第4个是备注
-    if (fields.length >= 4) {
-      note = fields[1].trim(); // 第2个字段作为备注（原始描述）
-      category = fields[3].trim(); // 第4个字段作为分类
-    } else {
-      // 只有3个字段，判断第3个是分类还是备注
-      const thirdField = fields[2].trim();
-      if (isCategory(thirdField)) {
-        category = thirdField;
-        note = fields[1].trim();
-      } else {
-        note = thirdField;
-        category = guessCategory(fields[1].trim());
-      }
-    }
+  if (fields.length >= 4) {
+    // 第4个字段是分类
+    category = fields[3].trim();
   } else {
-    // 只有2个字段，根据描述猜测分类
-    note = fields[1].trim();
+    // 没有分类字段，根据描述猜测
     category = guessCategory(note);
   }
 
