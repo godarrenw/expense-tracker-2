@@ -218,12 +218,12 @@
                         <div class="amount" id="currentMonth">¥0.00</div>
                     </div>
                     <div class="info-item">
-                        <h4>本周剩余预算</h4>
+                        <h4>今日支出</h4>
                         <div class="amount" id="weeklyBudget">¥0.00</div>
                     </div>
                     <div class="info-item">
-                        <h4>本月剩余预算</h4>
-                        <div class="amount" id="monthlyBudget">¥0.00</div>
+                        <h4>查询日期</h4>
+                        <div class="amount" id="monthlyBudget" style="font-size: 1rem;">未知</div>
                     </div>
                 </div>
             </div>
@@ -257,7 +257,7 @@
 
     <script>
         let chart;
-        const EXTERNAL_API_URL = 'https://1252702612-6e2319h9m9.ap-guangzhou.tencentscf.com';
+        const EXTERNAL_API_URL = 'https://1252702612-9k0orx4po5.ap-guangzhou.tencentscf.com';
         const PROXY_API_URL = '/api/proxy'; // 使用本地代理
 
         async function loadExpenseData() {
@@ -298,11 +298,21 @@
                         // 代理API成功且包含外部API数据
                         if (proxyResult.success && proxyResult.data) {
                             const externalData = proxyResult.data;
-                            // 检查外部API的数据格式
+                            // 检查新API的数据格式
                             if (externalData.code === 200 && externalData.data) {
-                                currentData = externalData.data;
+                                // 转换新API格式为旧格式兼容
+                                const apiData = externalData.data;
+                                currentData = {
+                                    total_day_spent: apiData.daily?.总计 || 0,
+                                    total_week_spent: apiData.weekly?.总计 || 0,
+                                    total_month_spent: apiData.monthly?.总计 || 0,
+                                    remaining_weekly_budget: 0, // 新API不提供预算信息
+                                    remaining_monthly_budget: 0, // 新API不提供预算信息
+                                    date_info: apiData.date_info
+                                };
                                 console.log('成功获取外部API数据:', currentData);
                                 addDebugInfo('✅ 成功获取外部API数据');
+                                addDebugInfo(`今日支出: ${currentData.total_day_spent}, 本周支出: ${currentData.total_week_spent}, 本月支出: ${currentData.total_month_spent}`);
                             } else {
                                 addDebugInfo(`❌ 外部API数据格式不正确: code=${externalData.code}`);
                             }
@@ -343,10 +353,10 @@
                     console.warn('没有外部API数据，使用默认值');
                     // 显示默认值
                     updateCurrentInfo({
+                        total_day_spent: 0,
                         total_week_spent: 0,
                         total_month_spent: 0,
-                        remaining_weekly_budget: 0,
-                        remaining_monthly_budget: 0
+                        date_info: { query_time: '未知 00:00:00' }
                     });
                 }
 
@@ -368,8 +378,13 @@
             // 更新实时支出信息
             document.getElementById('currentWeek').textContent = '¥' + (data.total_week_spent || 0).toFixed(2);
             document.getElementById('currentMonth').textContent = '¥' + (data.total_month_spent || 0).toFixed(2);
-            document.getElementById('weeklyBudget').textContent = '¥' + (data.remaining_weekly_budget || 0).toFixed(2);
-            document.getElementById('monthlyBudget').textContent = '¥' + (data.remaining_monthly_budget || 0).toFixed(2);
+            
+            // 新API不提供预算信息，显示今日支出和查询时间
+            const todaySpent = data.total_day_spent || 0;
+            const queryTime = data.date_info?.query_time || '未知';
+            
+            document.getElementById('weeklyBudget').textContent = '¥' + todaySpent.toFixed(2);
+            document.getElementById('monthlyBudget').textContent = queryTime.split(' ')[0]; // 只显示日期部分
         }
 
         function combineData(currentData, historyData) {

@@ -1,7 +1,7 @@
 // 代理外部API请求以解决CORS问题
 export async function onRequestGet(context) {
   try {
-    const EXTERNAL_API_URL = 'https://1252702612-6e2319h9m9.ap-guangzhou.tencentscf.com';
+    const EXTERNAL_API_URL = 'https://1252702612-9k0orx4po5.ap-guangzhou.tencentscf.com';
     
     // 请求外部API
     const response = await fetch(EXTERNAL_API_URL, {
