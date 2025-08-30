@@ -124,6 +124,45 @@
             background: rgba(0, 0, 0, 0.9);
         }
 
+        .current-info {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            color: white;
+            text-align: center;
+        }
+
+        .current-info h2 {
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
+
+        .current-info .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .current-info .info-item {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        .current-info .info-item h4 {
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+            opacity: 0.8;
+        }
+
+        .current-info .info-item .amount {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 20px;
@@ -137,6 +176,10 @@
             .chart-container {
                 height: 300px;
                 padding: 15px;
+            }
+
+            .current-info .info-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -155,6 +198,29 @@
         <div id="error" class="error" style="display: none;"></div>
 
         <div id="content" style="display: none;">
+            <!-- 当前支出信息 -->
+            <div class="current-info">
+                <h2>📈 实时支出统计</h2>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <h4>本周支出</h4>
+                        <div class="amount" id="currentWeek">¥0.00</div>
+                    </div>
+                    <div class="info-item">
+                        <h4>本月支出</h4>
+                        <div class="amount" id="currentMonth">¥0.00</div>
+                    </div>
+                    <div class="info-item">
+                        <h4>本周剩余预算</h4>
+                        <div class="amount" id="weeklyBudget">¥0.00</div>
+                    </div>
+                    <div class="info-item">
+                        <h4>本月剩余预算</h4>
+                        <div class="amount" id="monthlyBudget">¥0.00</div>
+                    </div>
+                </div>
+            </div>
+
             <div class="chart-container">
                 <canvas id="expenseChart"></canvas>
             </div>
@@ -162,7 +228,7 @@
             <div class="stats-grid">
                 <div class="stat-card">
                     <h3>本月支出</h3>
-                    <div class="value" id="currentMonth">¥0</div>
+                    <div class="value" id="currentMonthStat">¥0</div>
                 </div>
                 <div class="stat-card">
                     <h3>上月支出</h3>
@@ -173,8 +239,8 @@
                     <div class="value" id="avgMonth">¥0</div>
                 </div>
                 <div class="stat-card">
-                    <h3>总记录数</h3>
-                    <div class="value" id="totalRecords">0</div>
+                    <h3>历史月份数</h3>
+                    <div class="value" id="totalMonths">0</div>
                 </div>
             </div>
         </div>
@@ -184,25 +250,44 @@
 
     <script>
         let chart;
+        const EXTERNAL_API_URL = 'https://1252702612-6e2319h9m9.ap-guangzhou.tencentscf.com';
 
         async function loadExpenseData() {
             try {
-                const response = await fetch('/api/expenses');
-                const result = await response.json();
+                // 同时加载外部API数据和本地历史数据
+                const [externalResponse, historyResponse] = await Promise.all([
+                    fetch(EXTERNAL_API_URL).catch(() => null),
+                    fetch('/api/expenses').catch(() => null)
+                ]);
 
-                if (!result.success) {
-                    throw new Error(result.error || '加载数据失败');
+                let currentData = null;
+                let historyData = [];
+
+                // 处理外部API数据（当月数据）
+                if (externalResponse && externalResponse.ok) {
+                    const externalResult = await externalResponse.json();
+                    if (externalResult.code === 200 && externalResult.data) {
+                        currentData = externalResult.data;
+                    }
                 }
 
-                const data = result.data;
-                
-                if (data.length === 0) {
-                    showError('暂无数据，请先在管理后台添加支出记录');
-                    return;
+                // 处理本地历史数据
+                if (historyResponse && historyResponse.ok) {
+                    const historyResult = await historyResponse.json();
+                    if (historyResult.success && historyResult.data) {
+                        historyData = historyResult.data;
+                    }
                 }
 
-                renderChart(data);
-                updateStats(data);
+                // 更新当前支出信息
+                if (currentData) {
+                    updateCurrentInfo(currentData);
+                }
+
+                // 合并数据并渲染图表
+                const combinedData = combineData(currentData, historyData);
+                renderChart(combinedData);
+                updateStats(combinedData);
                 
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('content').style.display = 'block';
@@ -212,8 +297,49 @@
             }
         }
 
+        function updateCurrentInfo(data) {
+            // 更新实时支出信息
+            document.getElementById('currentWeek').textContent = '¥' + (data.total_week_spent || 0).toFixed(2);
+            document.getElementById('currentMonth').textContent = '¥' + (data.total_month_spent || 0).toFixed(2);
+            document.getElementById('weeklyBudget').textContent = '¥' + (data.remaining_weekly_budget || 0).toFixed(2);
+            document.getElementById('monthlyBudget').textContent = '¥' + (data.remaining_monthly_budget || 0).toFixed(2);
+        }
+
+        function combineData(currentData, historyData) {
+            const combined = [...historyData];
+            
+            if (currentData) {
+                const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM格式
+                
+                // 检查当月是否已存在于历史数据中
+                const existingIndex = combined.findIndex(item => item.month === currentMonth);
+                
+                if (existingIndex >= 0) {
+                    // 更新现有月份数据
+                    combined[existingIndex].total_amount = currentData.total_month_spent || 0;
+                } else {
+                    // 添加新的月份数据
+                    combined.push({
+                        month: currentMonth,
+                        total_amount: currentData.total_month_spent || 0,
+                        count: 1
+                    });
+                }
+            }
+            
+            return combined;
+        }
+
         function renderChart(data) {
             const ctx = document.getElementById('expenseChart').getContext('2d');
+            
+            if (!data || data.length === 0) {
+                ctx.font = '16px Arial';
+                ctx.fillStyle = '#666';
+                ctx.textAlign = 'center';
+                ctx.fillText('暂无数据', ctx.canvas.width / 2, ctx.canvas.height / 2);
+                return;
+            }
             
             // 按时间排序（最早的在前）
             data.sort((a, b) => a.month.localeCompare(b.month));
@@ -224,6 +350,10 @@
             });
             
             const amounts = data.map(item => item.total_amount);
+
+            if (chart) {
+                chart.destroy();
+            }
 
             chart = new Chart(ctx, {
                 type: 'line',
@@ -291,6 +421,14 @@
         }
 
         function updateStats(data) {
+            if (!data || data.length === 0) {
+                document.getElementById('currentMonthStat').textContent = '¥0';
+                document.getElementById('lastMonth').textContent = '¥0';
+                document.getElementById('avgMonth').textContent = '¥0';
+                document.getElementById('totalMonths').textContent = '0';
+                return;
+            }
+
             // 按时间排序
             data.sort((a, b) => b.month.localeCompare(a.month));
             
@@ -298,12 +436,11 @@
             const lastMonth = data[1]?.total_amount || 0;
             const totalAmount = data.reduce((sum, item) => sum + item.total_amount, 0);
             const avgAmount = data.length > 0 ? totalAmount / data.length : 0;
-            const totalRecords = data.reduce((sum, item) => sum + item.count, 0);
 
-            document.getElementById('currentMonth').textContent = '¥' + currentMonth.toLocaleString();
+            document.getElementById('currentMonthStat').textContent = '¥' + currentMonth.toLocaleString();
             document.getElementById('lastMonth').textContent = '¥' + lastMonth.toLocaleString();
             document.getElementById('avgMonth').textContent = '¥' + Math.round(avgAmount).toLocaleString();
-            document.getElementById('totalRecords').textContent = totalRecords.toLocaleString();
+            document.getElementById('totalMonths').textContent = data.length.toString();
         }
 
         function showError(message) {
@@ -314,6 +451,9 @@
 
         // 页面加载时获取数据
         document.addEventListener('DOMContentLoaded', loadExpenseData);
+
+        // 每30秒刷新一次数据
+        setInterval(loadExpenseData, 30000);
     </script>
 </body>
 </html>

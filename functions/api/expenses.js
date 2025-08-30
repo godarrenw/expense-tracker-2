@@ -3,18 +3,15 @@ export async function onRequestGet(context) {
   try {
     const db = context.env.DB;
     
-    // 获取按月聚合的支出数据（公共API）
+    // 获取历史月份总和数据（排除当月）
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    
     const result = await db.prepare(`
-      SELECT 
-        strftime('%Y-%m', date) as month,
-        SUM(amount) as total_amount,
-        COUNT(*) as count
-      FROM expenses 
-      WHERE amount > 0
-      GROUP BY strftime('%Y-%m', date)
+      SELECT month, total_amount, 1 as count
+      FROM monthly_totals 
+      WHERE month < ?
       ORDER BY month DESC
-      LIMIT 12
-    `).all();
+    `).bind(currentMonth).all();
 
     return Response.json({
       success: true,

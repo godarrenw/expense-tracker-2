@@ -261,80 +261,49 @@
 
         <!-- 管理内容区域 -->
         <div id="adminContent" class="admin-content">
-            <!-- 添加新记录 -->
+            <!-- 历史月份总和管理 -->
             <div class="section">
-                <h3>➕ 添加支出记录</h3>
-                <div class="form-row">
+                <h3>📅 历史月份总和管理</h3>
+                <p style="color: #666; margin-bottom: 20px;">
+                    管理从2025年8月开始的历史月份支出总和。当月数据由外部API提供，无需手动维护。
+                </p>
+                <div style="margin-bottom: 20px;">
+                    <button class="btn" onclick="loadMonthlyTotals()">刷新月份数据</button>
+                    <button class="btn btn-success" onclick="showAddMonthModal()">➕ 添加月份</button>
+                </div>
+                <div id="monthlyTotalsContainer">
+                    <!-- 月份总和表格将在这里动态生成 -->
+                </div>
+            </div>
+
+            <!-- 添加/编辑月份模态框 -->
+            <div id="monthModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+                <div style="background: white; padding: 30px; border-radius: 15px; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto;">
+                    <h3 id="modalTitle">添加月份数据</h3>
                     <div class="form-group">
-                        <label>日期</label>
-                        <input type="date" id="expenseDate" required>
+                        <label>月份</label>
+                        <input type="month" id="modalMonth" required>
                     </div>
                     <div class="form-group">
-                        <label>金额</label>
-                        <input type="number" id="expenseAmount" step="0.01" placeholder="0.00" required>
-                    </div>
-                    <div class="form-group">
-                        <label>分类</label>
-                        <select id="expenseCategory">
-                            <option value="">选择分类</option>
-                            <option value="餐饮">餐饮</option>
-                            <option value="交通">交通</option>
-                            <option value="购物">购物</option>
-                            <option value="娱乐">娱乐</option>
-                            <option value="医疗">医疗</option>
-                            <option value="教育">教育</option>
-                            <option value="住房">住房</option>
-                            <option value="保险">保险</option>
-                            <option value="旅行">旅行</option>
-                            <option value="礼物">礼物</option>
-                            <option value="其他">其他</option>
-                        </select>
+                        <label>支出总额</label>
+                        <input type="number" id="modalAmount" step="0.01" placeholder="0.00" required>
                     </div>
                     <div class="form-group">
                         <label>备注</label>
-                        <input type="text" id="expenseNote" placeholder="可选备注">
+                        <input type="text" id="modalNote" placeholder="可选备注">
+                    </div>
+                    <div style="margin-top: 20px;">
+                        <button class="btn" onclick="saveMonthlyTotal()">保存</button>
+                        <button class="btn" onclick="hideMonthModal()" style="background: #ccc; color: #333;">取消</button>
                     </div>
                 </div>
-                <button class="btn" onclick="addExpense()">添加记录</button>
             </div>
 
-            <!-- CSV批量导入 -->
+            <!-- 记录列表（保留原有功能但简化） -->
             <div class="section">
-                <h3>📁 CSV批量导入</h3>
-                <p style="color: #666; margin-bottom: 20px;">
-                    支持UTF-8和GBK编码，自动检测表头和格式。支持钱迹、自定义等多种CSV格式
-                </p>
-                <div class="form-group">
-                    <label>选择CSV文件</label>
-                    <input type="file" id="csvFile" accept=".csv" style="margin-bottom: 10px;">
-                    <div style="font-size: 0.9rem; color: #666;">
-                        <strong>支持格式：</strong><br>
-                        • <strong>钱迹导出</strong>：自动识别钱迹应用导出的完整格式<br>
-                        • <strong>简单格式</strong>：日期,描述,金额,分类<br>
-                        • <strong>示例</strong>：08-01-2025,晚饭,$84.50,餐饮<br>
-                        • 自动过滤收入记录，只导入支出<br>
-                        • 智能分类映射和去重检测
-                    </div>
-                </div>
-                <button class="btn btn-success" onclick="importCSV()" id="importBtn">
-                    📤 导入CSV文件
-                </button>
-                <div id="importProgress" style="display: none; margin-top: 15px;">
-                    <div style="color: #667eea; font-weight: 500;">正在处理文件...</div>
-                </div>
-                <div id="importResult" style="margin-top: 15px;"></div>
-            </div>
-
-            <!-- 记录列表 -->
-            <div class="section">
-                <h3>📋 最近记录</h3>
+                <h3>📋 系统管理</h3>
                 <div style="margin-bottom: 20px;">
-                    <button class="btn" onclick="loadRecords()">刷新记录</button>
-                    <button class="btn btn-danger" onclick="deleteZeroAmount()">🗑️ 删除金额为0的记录</button>
-                    <button class="btn btn-danger" onclick="confirmDeleteAll()">⚠️ 删除所有记录</button>
-                </div>
-                <div id="recordsContainer">
-                    <!-- 记录表格将在这里动态生成 -->
+                    <button class="btn btn-success" onclick="initDatabase()">一键初始化数据库</button>
                 </div>
             </div>
         </div>
@@ -345,15 +314,13 @@
 
     <script>
         let adminToken = localStorage.getItem('adminToken') || '';
+        let editingMonthId = null;
 
         // 页面加载时检查是否已登录
         document.addEventListener('DOMContentLoaded', function() {
-            // 设置今天的日期作为默认值
-            document.getElementById('expenseDate').value = new Date().toISOString().split('T')[0];
-            
             if (adminToken) {
                 showAdminPanel();
-                loadRecords();
+                loadMonthlyTotals();
             }
         });
 
@@ -369,7 +336,7 @@
             
             showAdminPanel();
             showMessage('登录成功', 'success');
-            loadRecords();
+            loadMonthlyTotals();
         }
 
         async function initDatabase() {
@@ -405,53 +372,10 @@
             }
         }
 
-        async function addExpense() {
-            const date = document.getElementById('expenseDate').value;
-            const amount = parseFloat(document.getElementById('expenseAmount').value);
-            const category = document.getElementById('expenseCategory').value;
-            const note = document.getElementById('expenseNote').value;
-
-            if (!date || !amount) {
-                showMessage('日期和金额为必填项', 'error');
-                return;
-            }
-
+        // 月份管理相关函数
+        async function loadMonthlyTotals() {
             try {
-                const response = await fetch('/api/expenses', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Admin-Token': adminToken
-                    },
-                    body: JSON.stringify({
-                        date: date,
-                        amount: amount,
-                        category: category,
-                        note: note
-                    })
-                });
-
-                const result = await response.json();
-                
-                if (result.success) {
-                    showMessage('记录添加成功', 'success');
-                    // 清空表单
-                    document.getElementById('expenseAmount').value = '';
-                    document.getElementById('expenseCategory').value = '';
-                    document.getElementById('expenseNote').value = '';
-                    // 重新加载记录
-                    loadRecords();
-                } else {
-                    showMessage('添加失败: ' + result.error, 'error');
-                }
-            } catch (error) {
-                showMessage('添加失败: ' + error.message, 'error');
-            }
-        }
-
-        async function loadRecords() {
-            try {
-                const response = await fetch('/api/admin?action=list_all', {
+                const response = await fetch('/api/admin?action=list_monthly_totals', {
                     headers: {
                         'X-Admin-Token': adminToken
                     }
@@ -460,20 +384,20 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    renderRecords(result.data);
+                    renderMonthlyTotals(result.data);
                 } else {
-                    showMessage('加载记录失败: ' + result.error, 'error');
+                    showMessage('加载月份数据失败: ' + result.error, 'error');
                 }
             } catch (error) {
-                showMessage('加载记录失败: ' + error.message, 'error');
+                showMessage('加载月份数据失败: ' + error.message, 'error');
             }
         }
 
-        function renderRecords(records) {
-            const container = document.getElementById('recordsContainer');
+        function renderMonthlyTotals(data) {
+            const container = document.getElementById('monthlyTotalsContainer');
             
-            if (records.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">暂无记录</p>';
+            if (data.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">暂无月份数据</p>';
                 return;
             }
 
@@ -481,25 +405,31 @@
                 <table class="records-table">
                     <thead>
                         <tr>
-                            <th>日期</th>
-                            <th>金额</th>
-                            <th>分类</th>
+                            <th>月份</th>
+                            <th>支出总额</th>
                             <th>备注</th>
+                            <th>更新时间</th>
                             <th>操作</th>
                         </tr>
                     </thead>
                     <tbody>
             `;
 
-            records.forEach(record => {
+            data.forEach(record => {
+                const monthDisplay = record.month.split('-').map((part, index) => {
+                    return index === 0 ? part + '年' : part + '月';
+                }).join('');
+                
+                const updateTime = new Date(record.updated_at).toLocaleString('zh-CN');
+                
                 html += `
                     <tr>
-                        <td>${record.date}</td>
-                        <td>¥${record.amount.toLocaleString()}</td>
-                        <td>${record.category || '-'}</td>
+                        <td>${monthDisplay}</td>
+                        <td>¥${record.total_amount.toLocaleString()}</td>
                         <td>${record.note || '-'}</td>
+                        <td>${updateTime}</td>
                         <td>
-                            <button class="delete-btn" onclick="deleteRecord(${record.id})">删除</button>
+                            <button class="btn" style="padding: 4px 8px; font-size: 0.8rem;" onclick="editMonthlyTotal('${record.month}', ${record.total_amount}, '${record.note}')">编辑</button>
                         </td>
                     </tr>
                 `;
@@ -509,183 +439,54 @@
             container.innerHTML = html;
         }
 
-        async function deleteRecord(id) {
-            if (!confirm('确定要删除这条记录吗？')) {
-                return;
-            }
-
-            try {
-                const response = await fetch(`/api/expenses?id=${id}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-Admin-Token': adminToken
-                    }
-                });
-
-                const result = await response.json();
-                
-                if (result.success) {
-                    showMessage('记录删除成功', 'success');
-                    loadRecords();
-                } else {
-                    showMessage('删除失败: ' + result.error, 'error');
-                }
-            } catch (error) {
-                showMessage('删除失败: ' + error.message, 'error');
-            }
+        function showAddMonthModal() {
+            editingMonthId = null;
+            document.getElementById('modalTitle').textContent = '添加月份数据';
+            document.getElementById('modalMonth').value = '';
+            document.getElementById('modalAmount').value = '';
+            document.getElementById('modalNote').value = '';
+            document.getElementById('modalMonth').disabled = false;
+            document.getElementById('monthModal').style.display = 'flex';
         }
 
-        async function importCSV() {
-            const fileInput = document.getElementById('csvFile');
-            const file = fileInput.files[0];
-            
-            if (!file) {
-                showMessage('请选择CSV文件', 'error');
-                return;
-            }
-
-            if (!file.name.toLowerCase().endsWith('.csv')) {
-                showMessage('请选择CSV格式的文件', 'error');
-                return;
-            }
-
-            // 显示进度
-            document.getElementById('importProgress').style.display = 'block';
-            document.getElementById('importBtn').disabled = true;
-            document.getElementById('importResult').innerHTML = '';
-
-            try {
-                const formData = new FormData();
-                formData.append('csvFile', file);
-
-                const response = await fetch('/api/import', {
-                    method: 'POST',
-                    headers: {
-                        'X-Admin-Token': adminToken
-                    },
-                    body: formData
-                });
-
-                const result = await response.json();
-                
-                // 隐藏进度
-                document.getElementById('importProgress').style.display = 'none';
-                document.getElementById('importBtn').disabled = false;
-
-                if (result.success) {
-                    const data = result.data;
-                    let resultHtml = `
-                        <div class="message success">
-                            <strong>导入完成！</strong><br>
-                            • 文件编码: ${data.encoding.toUpperCase()}<br>
-                            • 总记录数: ${data.totalRecords}<br>
-                            • 成功导入: ${data.insertedCount}<br>
-                            • 重复跳过: ${data.duplicateCount}<br>
-                            • 失败记录: ${data.errorCount}
-                        </div>
-                    `;
-                    
-                    if (data.duplicates && data.duplicates.length > 0) {
-                        resultHtml += `
-                            <div style="margin-top: 10px; padding: 10px; background: #e3f2fd; border: 1px solid #90caf9; border-radius: 5px;">
-                                <strong>跳过的重复记录：</strong><br>
-                        `;
-                        data.duplicates.slice(0, 5).forEach(dup => {
-                            resultHtml += `• ${dup.date} - ${dup.note} (¥${dup.amount})<br>`;
-                        });
-                        if (data.duplicates.length > 5) {
-                            resultHtml += `• 还有 ${data.duplicates.length - 5} 个重复记录...`;
-                        }
-                        resultHtml += '</div>';
-                    }
-                    
-                    if (data.errors && data.errors.length > 0) {
-                        resultHtml += `
-                            <div style="margin-top: 10px; padding: 10px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px;">
-                                <strong>部分记录导入失败：</strong><br>
-                        `;
-                        data.errors.slice(0, 5).forEach(error => {
-                            resultHtml += `• ${error.record.date} - ${error.record.note}: ${error.error}<br>`;
-                        });
-                        if (data.errors.length > 5) {
-                            resultHtml += `• 还有 ${data.errors.length - 5} 个错误...`;
-                        }
-                        resultHtml += '</div>';
-                    }
-                    
-                    document.getElementById('importResult').innerHTML = resultHtml;
-                    
-                    // 清空文件选择
-                    fileInput.value = '';
-                    
-                    // 刷新记录列表
-                    loadRecords();
-                    
-                    showMessage(`成功导入 ${data.insertedCount} 条记录`, 'success');
-                } else {
-                    showMessage('导入失败: ' + result.error, 'error');
-                }
-            } catch (error) {
-                document.getElementById('importProgress').style.display = 'none';
-                document.getElementById('importBtn').disabled = false;
-                showMessage('导入失败: ' + error.message, 'error');
-            }
+        function editMonthlyTotal(month, amount, note) {
+            editingMonthId = month;
+            document.getElementById('modalTitle').textContent = '编辑月份数据';
+            document.getElementById('modalMonth').value = month;
+            document.getElementById('modalAmount').value = amount;
+            document.getElementById('modalNote').value = note || '';
+            document.getElementById('modalMonth').disabled = true; // 编辑时不允许修改月份
+            document.getElementById('monthModal').style.display = 'flex';
         }
 
-        async function deleteZeroAmount() {
-            if (!confirm('确定要删除所有金额为0的记录吗？此操作不可撤销。')) {
+        function hideMonthModal() {
+            document.getElementById('monthModal').style.display = 'none';
+            editingMonthId = null;
+        }
+
+        async function saveMonthlyTotal() {
+            const month = document.getElementById('modalMonth').value;
+            const amount = parseFloat(document.getElementById('modalAmount').value);
+            const note = document.getElementById('modalNote').value;
+
+            if (!month || amount === undefined || isNaN(amount)) {
+                showMessage('月份和金额为必填项', 'error');
                 return;
             }
 
             try {
-                const response = await fetch('/api/batch', {
+                const response = await fetch('/api/admin', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-Admin-Token': adminToken
                     },
                     body: JSON.stringify({
-                        action: 'delete_zero_amount'
-                    })
-                });
-
-                const result = await response.json();
-                
-                if (result.success) {
-                    showMessage(`成功删除 ${result.data.deletedCount} 条金额为0的记录`, 'success');
-                    loadRecords();
-                } else {
-                    showMessage('删除失败: ' + result.error, 'error');
-                }
-            } catch (error) {
-                showMessage('删除失败: ' + error.message, 'error');
-            }
-        }
-
-        async function confirmDeleteAll() {
-            // 第一次确认
-            if (!confirm('⚠️ 警告：此操作将删除所有支出记录！\n\n此操作不可撤销，确定要继续吗？')) {
-                return;
-            }
-
-            // 第二次确认
-            const confirmText = prompt('请输入 "DELETE ALL" 来确认删除所有记录：');
-            if (confirmText !== 'DELETE ALL') {
-                showMessage('确认文本不正确，操作已取消', 'error');
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/batch', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Admin-Token': adminToken
-                    },
-                    body: JSON.stringify({
-                        action: 'delete_all',
+                        action: 'update_monthly_total',
                         data: {
-                            confirmToken: 'CONFIRM_DELETE_ALL'
+                            month: month,
+                            total_amount: amount,
+                            note: note
                         }
                     })
                 });
@@ -693,15 +494,18 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    showMessage(`成功删除所有记录 (共 ${result.data.deletedCount} 条)`, 'success');
-                    loadRecords();
+                    showMessage(editingMonthId ? '月份数据更新成功' : '月份数据添加成功', 'success');
+                    hideMonthModal();
+                    loadMonthlyTotals();
                 } else {
-                    showMessage('删除失败: ' + result.error, 'error');
+                    showMessage('保存失败: ' + result.error, 'error');
                 }
             } catch (error) {
-                showMessage('删除失败: ' + error.message, 'error');
+                showMessage('保存失败: ' + error.message, 'error');
             }
         }
+
+        // 管理面板显示/隐藏函数
 
         function showAdminPanel() {
             document.getElementById('authSection').style.display = 'none';
