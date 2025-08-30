@@ -271,14 +271,9 @@
                 addDebugInfo('请求本地API: /api/expenses');
                 
                 const [externalResponse, historyResponse] = await Promise.all([
-                    fetch(EXTERNAL_API_URL, {
-                        method: 'GET',
-                        mode: 'cors',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        }
-                    }).catch(error => {
+                    fetch(EXTERNAL_API_URL).catch(error => {
                         console.error('外部API请求失败:', error);
+                        addDebugInfo(`外部API请求错误: ${error.message}`);
                         return null;
                     }),
                     fetch('/api/expenses').catch(error => {
