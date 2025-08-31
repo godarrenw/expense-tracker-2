@@ -438,13 +438,18 @@
 
         function updateCurrentInfo(data) {
             // 更新三栏支出信息
-            document.getElementById('todayExpense').textContent = '¥' + (data.total_day_spent || 0).toFixed(2);
-            document.getElementById('weekExpense').textContent = '¥' + (data.total_week_spent || 0).toFixed(2);
-            document.getElementById('monthExpense').textContent = '¥' + (data.total_month_spent || 0).toFixed(2);
+            const todayElement = document.getElementById('todayExpense');
+            const weekElement = document.getElementById('weekExpense');
+            const monthElement = document.getElementById('monthExpense');
+            const queryTimeElement = document.getElementById('queryTime');
+            
+            if (todayElement) todayElement.textContent = '¥' + (data.total_day_spent || 0).toFixed(2);
+            if (weekElement) weekElement.textContent = '¥' + (data.total_week_spent || 0).toFixed(2);
+            if (monthElement) monthElement.textContent = '¥' + (data.total_month_spent || 0).toFixed(2);
             
             // 更新查询时间
             const queryTime = data.date_info?.query_time || '未知';
-            document.getElementById('queryTime').textContent = queryTime;
+            if (queryTimeElement) queryTimeElement.textContent = queryTime;
             
             // 更新分类数据（如果有的话）
             updateCategoriesData(data);
@@ -600,11 +605,15 @@
 
         function updateStats(data) {
             if (!data || data.length === 0) {
-                document.getElementById('lastMonthExpense').textContent = '¥0';
-                document.getElementById('avgExpense').textContent = '¥0';
-                document.getElementById('maxMonthExpense').textContent = '¥0';
-                document.getElementById('minMonthExpense').textContent = '¥0';
-                document.getElementById('totalMonths').textContent = '0';
+                const lastMonthElement = document.getElementById('lastMonthExpense');
+                const maxMonthElement = document.getElementById('maxMonthExpense');
+                const minMonthElement = document.getElementById('minMonthExpense');
+                const totalMonthsElement = document.getElementById('totalMonths');
+                
+                if (lastMonthElement) lastMonthElement.textContent = '¥0';
+                if (maxMonthElement) maxMonthElement.textContent = '¥0';
+                if (minMonthElement) minMonthElement.textContent = '¥0';
+                if (totalMonthsElement) totalMonthsElement.textContent = '0';
                 return;
             }
 
@@ -612,17 +621,19 @@
             data.sort((a, b) => b.month.localeCompare(a.month));
             
             const amounts = data.map(item => item.total_amount);
-            const totalAmount = amounts.reduce((sum, amount) => sum + amount, 0);
-            const avgAmount = data.length > 0 ? totalAmount / data.length : 0;
             const maxAmount = Math.max(...amounts);
             const minAmount = Math.min(...amounts);
             const lastMonth = data[0]?.total_amount || 0;
 
-            document.getElementById('lastMonthExpense').textContent = '¥' + lastMonth.toLocaleString();
-            document.getElementById('avgExpense').textContent = '¥' + Math.round(avgAmount).toLocaleString();
-            document.getElementById('maxMonthExpense').textContent = '¥' + maxAmount.toLocaleString();
-            document.getElementById('minMonthExpense').textContent = '¥' + minAmount.toLocaleString();
-            document.getElementById('totalMonths').textContent = data.length.toString();
+            const lastMonthElement = document.getElementById('lastMonthExpense');
+            const maxMonthElement = document.getElementById('maxMonthExpense');
+            const minMonthElement = document.getElementById('minMonthExpense');
+            const totalMonthsElement = document.getElementById('totalMonths');
+
+            if (lastMonthElement) lastMonthElement.textContent = '¥' + lastMonth.toLocaleString();
+            if (maxMonthElement) maxMonthElement.textContent = '¥' + maxAmount.toLocaleString();
+            if (minMonthElement) minMonthElement.textContent = '¥' + minAmount.toLocaleString();
+            if (totalMonthsElement) totalMonthsElement.textContent = data.length.toString();
         }
 
         function showError(message) {
