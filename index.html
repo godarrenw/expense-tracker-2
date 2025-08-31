@@ -158,30 +158,43 @@
             color: #666;
         }
 
-        .expense-summary {
-            background: #ffe8e8;
+        .expense-overview {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1px;
+            background: #d0d7de;
             border: 1px solid #d0d7de;
-            padding: 20px;
-            text-align: center;
             margin-bottom: 20px;
         }
 
-        .expense-summary h3 {
-            font-size: 1.1rem;
+        .expense-card {
+            background: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .expense-card.today {
+            background: #e8f4fd;
+        }
+
+        .expense-card.week {
+            background: #fff2e8;
+        }
+
+        .expense-card.month {
+            background: #ffe8e8;
+        }
+
+        .expense-card h3 {
+            font-size: 1rem;
             margin-bottom: 10px;
             color: #555;
         }
 
-        .expense-summary .amount {
-            font-size: 1.8rem;
+        .expense-card .amount {
+            font-size: 1.4rem;
             font-weight: 600;
-            color: #d73527;
-        }
-
-        .expense-summary .period-info {
-            font-size: 0.8rem;
-            color: #666;
-            margin-top: 5px;
+            color: #333;
         }
 
         .categories-section {
@@ -221,41 +234,7 @@
             color: #333;
         }
 
-        .controls-section {
-            background: #f8f9fa;
-            border: 1px solid #d0d7de;
-            padding: 15px;
-            margin-bottom: 20px;
-        }
 
-        .controls-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 10px;
-        }
-
-        .control-btn {
-            background: #4472c4;
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            font-size: 0.8rem;
-            cursor: pointer;
-            border: 1px solid #2f5597;
-        }
-
-        .control-btn:hover {
-            background: #2f5597;
-        }
-
-        .control-btn.secondary {
-            background: #6c757d;
-            border-color: #5a6268;
-        }
-
-        .control-btn.secondary:hover {
-            background: #5a6268;
-        }
 
         @media (max-width: 768px) {
             .container {
@@ -271,11 +250,11 @@
                 gap: 10px;
             }
             
-            .categories-grid {
+            .expense-overview {
                 grid-template-columns: 1fr;
             }
             
-            .controls-grid {
+            .categories-grid {
                 grid-template-columns: 1fr;
             }
             
@@ -307,69 +286,41 @@
                     <strong>查询时间:</strong> <span id="queryTime">--</span>
                 </div>
 
-                <!-- 总支出概览 -->
-                <div class="expense-summary">
-                    <h3>本月总支出</h3>
-                    <div class="amount" id="totalExpenses">¥0</div>
-                    <div class="period-info" id="periodInfo">数据更新时间: --</div>
-                </div>
-
-                <!-- 操作控制区 -->
-                <div class="controls-section">
-                    <div class="section-header">操作选项</div>
-                    <div class="controls-grid">
-                        <button class="control-btn" onclick="refreshData()">🔄 刷新数据</button>
-                        <button class="control-btn" onclick="exportData()">📊 导出数据</button>
-                        <button class="control-btn secondary" onclick="togglePeriod()">📅 切换周期</button>
-                        <button class="control-btn secondary" onclick="showSettings()">⚙️ 设置</button>
+                <!-- 三栏支出概览 -->
+                <div class="expense-overview">
+                    <div class="expense-card today">
+                        <h3>今日支出</h3>
+                        <div class="amount" id="todayExpense">¥0.00</div>
+                    </div>
+                    <div class="expense-card week">
+                        <h3>本周支出</h3>
+                        <div class="amount" id="weekExpense">¥0.00</div>
+                    </div>
+                    <div class="expense-card month">
+                        <h3>本月支出</h3>
+                        <div class="amount" id="monthExpense">¥0.00</div>
                     </div>
                 </div>
 
-                <!-- 仪表板网格 -->
-                <div class="dashboard-grid">
-                    <!-- 当前支出统计 -->
-                    <div class="summary-section">
-                        <div class="section-header">当前支出统计</div>
-                        <div class="summary-content">
-                            <div class="summary-item">
-                                <span class="summary-label">今日支出</span>
-                                <span class="summary-value" id="todayExpense">¥0.00</span>
-                            </div>
-                            <div class="summary-item">
-                                <span class="summary-label">本周支出</span>
-                                <span class="summary-value" id="weekExpense">¥0.00</span>
-                            </div>
-                            <div class="summary-item">
-                                <span class="summary-label">本月支出</span>
-                                <span class="summary-value" id="monthExpense">¥0.00</span>
-                            </div>
-                            <div class="summary-item">
-                                <span class="summary-label">月平均支出</span>
-                                <span class="summary-value" id="avgExpense">¥0.00</span>
-                            </div>
+                <!-- 历史数据统计 -->
+                <div class="summary-section">
+                    <div class="section-header">历史数据统计</div>
+                    <div class="summary-content">
+                        <div class="summary-item">
+                            <span class="summary-label">上月支出</span>
+                            <span class="summary-value" id="lastMonthExpense">¥0.00</span>
                         </div>
-                    </div>
-
-                    <!-- 历史数据统计 -->
-                    <div class="summary-section">
-                        <div class="section-header">历史数据统计</div>
-                        <div class="summary-content">
-                            <div class="summary-item">
-                                <span class="summary-label">上月支出</span>
-                                <span class="summary-value" id="lastMonthExpense">¥0.00</span>
-                            </div>
-                            <div class="summary-item">
-                                <span class="summary-label">最高月支出</span>
-                                <span class="summary-value" id="maxMonthExpense">¥0.00</span>
-                            </div>
-                            <div class="summary-item">
-                                <span class="summary-label">最低月支出</span>
-                                <span class="summary-value" id="minMonthExpense">¥0.00</span>
-                            </div>
-                            <div class="summary-item">
-                                <span class="summary-label">记录月份数</span>
-                                <span class="summary-value" id="totalMonths">0</span>
-                            </div>
+                        <div class="summary-item">
+                            <span class="summary-label">最高月支出</span>
+                            <span class="summary-value" id="maxMonthExpense">¥0.00</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">最低月支出</span>
+                            <span class="summary-value" id="minMonthExpense">¥0.00</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">记录月份数</span>
+                            <span class="summary-value" id="totalMonths">0</span>
                         </div>
                     </div>
                 </div>
@@ -486,7 +437,7 @@
         }
 
         function updateCurrentInfo(data) {
-            // 更新当前支出信息
+            // 更新三栏支出信息
             document.getElementById('todayExpense').textContent = '¥' + (data.total_day_spent || 0).toFixed(2);
             document.getElementById('weekExpense').textContent = '¥' + (data.total_week_spent || 0).toFixed(2);
             document.getElementById('monthExpense').textContent = '¥' + (data.total_month_spent || 0).toFixed(2);
@@ -494,11 +445,6 @@
             // 更新查询时间
             const queryTime = data.date_info?.query_time || '未知';
             document.getElementById('queryTime').textContent = queryTime;
-            document.getElementById('periodInfo').textContent = `数据更新时间: ${queryTime}`;
-            
-            // 更新总支出（使用当月数据）
-            const totalExpenses = data.total_month_spent || 0;
-            document.getElementById('totalExpenses').textContent = '¥' + totalExpenses.toLocaleString();
             
             // 更新分类数据（如果有的话）
             updateCategoriesData(data);
@@ -685,87 +631,7 @@
             document.getElementById('error').textContent = message;
         }
 
-        // 操作功能
-        function refreshData() {
-            document.getElementById('loading').style.display = 'block';
-            document.getElementById('content').style.display = 'none';
-            loadExpenseData();
-        }
 
-        function exportData() {
-            // 导出当前显示的数据为CSV
-            const data = [];
-            data.push(['类别', '金额']);
-            
-            const categoryItems = document.querySelectorAll('.category-item');
-            categoryItems.forEach(item => {
-                const name = item.querySelector('.category-name').textContent;
-                const amount = item.querySelector('.category-amount').textContent;
-                if (name !== '暂无分类数据') {
-                    data.push([name, amount]);
-                }
-            });
-
-            const csv = data.map(row => row.join(',')).join('\n');
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            link.setAttribute('href', url);
-            link.setAttribute('download', `支出分类数据_${new Date().toISOString().slice(0, 10)}.csv`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
-        let currentPeriod = 'month';
-        function togglePeriod() {
-            const periods = ['month', 'week', 'day'];
-            const currentIndex = periods.indexOf(currentPeriod);
-            currentPeriod = periods[(currentIndex + 1) % periods.length];
-            
-            const periodNames = { month: '本月', week: '本周', day: '今日' };
-            document.querySelector('.expense-summary h3').textContent = `${periodNames[currentPeriod]}总支出`;
-            
-            // 更新分类标题
-            const categoryTitles = { month: '本月分类支出详情', week: '本周分类支出详情', day: '今日分类支出详情' };
-            document.querySelector('.categories-section .section-header').textContent = categoryTitles[currentPeriod];
-            
-            // 重新加载数据以显示不同周期
-            updatePeriodData();
-        }
-
-        function updatePeriodData() {
-            // 根据当前周期更新显示的数据
-            const currentData = window.lastLoadedData;
-            if (!currentData) return;
-
-            let amount = 0;
-            let categories = {};
-
-            switch(currentPeriod) {
-                case 'day':
-                    amount = currentData.total_day_spent || 0;
-                    categories = currentData.daily_categories || {};
-                    break;
-                case 'week':
-                    amount = currentData.total_week_spent || 0;
-                    categories = currentData.weekly_categories || {};
-                    break;
-                case 'month':
-                default:
-                    amount = currentData.total_month_spent || 0;
-                    categories = currentData.monthly_categories || {};
-                    break;
-            }
-
-            document.getElementById('totalExpenses').textContent = '¥' + amount.toLocaleString();
-            updateCategoriesData({ ...currentData, monthly_categories: categories });
-        }
-
-        function showSettings() {
-            alert('设置功能开发中...\n\n可配置项：\n- 自动刷新间隔\n- 数据显示格式\n- 导出选项\n- 主题设置');
-        }
 
         // 页面加载时获取数据
         document.addEventListener('DOMContentLoaded', function() {
