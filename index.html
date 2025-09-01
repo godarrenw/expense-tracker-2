@@ -344,7 +344,7 @@
         </div>
     </div>
 
-    <a href="/admin.html" class="admin-link">🔐 管理后台</a>
+    <!-- 管理后台链接已隐藏 -->
 
     <script>
         let chart;
@@ -623,7 +623,7 @@
             const amounts = data.map(item => item.total_amount);
             const maxAmount = Math.max(...amounts);
             const minAmount = Math.min(...amounts);
-            const lastMonth = data[0]?.total_amount || 0;
+            const lastMonth = data[1]?.total_amount || 0; // 获取上月数据（第二个元素）
 
             const lastMonthElement = document.getElementById('lastMonthExpense');
             const maxMonthElement = document.getElementById('maxMonthExpense');
